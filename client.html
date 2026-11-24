@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket.IO Live Chat Room</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Socket.IO Client -->
+    <script src="https://cdn.socket.io/4.8.4/socket.io.min.js"
+        integrity="sha384-fBrXvbDtHoeKWJ/hcA6M+YGueiDW+h45I7V6F2kD1S8bOkrF9rZYPLVkCR6BLR/1"
+        crossorigin="anonymous"></script>
+
+    <style>
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-surface: #111827;
+            --bg-surface-elevated: #1f2937;
+            --bg-message-other: #1e293b;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --primary-gradient: linear-gradient(135deg, #6366f1, #8b5cf6);
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --text-sub: #6b7280;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-focus: rgba(99, 102, 241, 0.6);
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-full: 9999px;
+            --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+            --shadow-bubble: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+            overflow: hidden;
+        }
+
+        /* App Main Shell */
+        .app-container {
+            width: 100%;
+            max-width: 950px;
+            height: 92vh;
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-card);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+        }
+
+        /* Top Header */
+        .chat-header {
+            padding: 16px 24px;
+            background: rgba(17, 24, 39, 0.85);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 10;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo {
+            width: 42px;
+            height: 42px;
+            background: var(--primary-gradient);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .brand-info h1 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent-red);
+            transition: background-color 0.3s ease;
+        }
+
+        .status-dot.connected {
+            background-color: var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green);
+            animation: pulseDot 2s infinite;
+        }
+
+        @keyframes pulseDot {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-count-chip {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: var(--radius-full);
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #d1d5db;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .user-profile-btn {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #c7d2fe;
+            padding: 6px 14px;
+            border-radius: var(--radius-full);
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .user-profile-btn:hover {
+            background: rgba(99, 102, 241, 0.25);
+            border-color: rgba(99, 102, 241, 0.5);
+        }
+
+        .icon-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+        }
+
+        .icon-btn.active {
+            color: var(--primary);
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        /* Banner Announcements */
+        .announcement-bar {
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(234, 88, 12, 0.15));
+            border-bottom: 1px solid rgba(245, 158, 11, 0.25);
+            color: #fcd34d;
+            padding: 10px 20px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .announcement-bar.hidden {
+            display: none;
+        }
+
+        .announcement-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .announcement-close {
+            background: transparent;
+            border: none;
+            color: #fcd34d;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .announcement-close:hover {
+            background: rgba(245, 158, 11, 0.2);
+        }
+
+        /* Chat Body & Messages */
+        .chat-body {
+            flex: 1;
+            padding: 20px 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            scroll-behavior: smooth;
+        }
+
+        .chat-body::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-body::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .chat-body::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 3px;
+        }
+
+        /* System Messages / Divider */
+        .system-bubble {
+            align-self: center;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-weight: 500;
+            padding: 5px 14px;
+            border-radius: var(--radius-full);
+            text-align: center;
+            margin: 4px 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .gyan-bubble {
+            align-self: center;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #a5b4fc;
+            font-size: 0.8rem;
+            padding: 7px 16px;
+            border-radius: var(--radius-full);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 6px 0;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+        }
+
+        /* Message Bubbles */
+        .message-row {
+            display: flex;
+            gap: 10px;
+            max-width: 75%;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-row.sent {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-row.received {
+            align-self: flex-start;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: white;
+            flex-shrink: 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .message-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .message-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            padding: 0 4px;
+        }
+
+        .message-row.sent .message-info {
+            justify-content: flex-end;
+        }
+
+        .sender-name {
+            font-weight: 600;
+            color: #d1d5db;
+        }
+
+        .message-bubble {
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            font-size: 0.92rem;
+            line-height: 1.45;
+            word-break: break-word;
+            box-shadow: var(--shadow-bubble);
+            position: relative;
+        }
+
+        .message-row.sent .message-bubble {
+            background: var(--primary-gradient);
+            color: #ffffff;
+            border-bottom-right-radius: 3px;
+        }
+
+        .message-row.received .message-bubble {
+            background: var(--bg-message-other);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 3px;
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            padding: 4px 10px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: var(--radius-full);
+            width: fit-content;
+            margin-top: 4px;
+        }
+
+        .typing-dots {
+            display: inline-flex;
+            gap: 3px;
+        }
+
+        .typing-dots span {
+            width: 5px;
+            height: 5px;
+            background-color: var(--primary);
+            border-radius: 50%;
+            animation: bounce 1.2s infinite;
+        }
+
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-4px); }
+        }
+
+        /* Input Controls Area */
+        .chat-input-area {
+            padding: 14px 20px;
+            background: rgba(17, 24, 39, 0.95);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .quick-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .emoji-bar {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+        }
+
+        .emoji-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 3px 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .emoji-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: scale(1.15);
+        }
+
+        .tutorial-trigger-btn {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #a5b4fc;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+
+        .tutorial-trigger-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+        }
+
+        .input-form {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .message-input {
+            flex: 1;
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-full);
+            padding: 12px 20px;
+            color: var(--text-main);
+            font-size: 0.93rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .message-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .message-input::placeholder {
+            color: var(--text-sub);
+        }
+
+        .send-btn {
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            transition: transform 0.15s ease, filter 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+
+        .send-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+            transform: translate(1px, -1px);
+        }
+
+        /* Tutorial Events Drawer / Panel */
+        .tutorial-drawer {
+            position: absolute;
+            top: 73px;
+            right: 0;
+            width: 320px;
+            bottom: 0;
+            background: #0f172a;
+            border-left: 1px solid var(--border-color);
+            box-shadow: -5px 0 20px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 20;
+        }
+
+        .tutorial-drawer.open {
+            transform: translateX(0);
+        }
+
+        .drawer-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .drawer-header h3 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .drawer-body {
+            flex: 1;
+            padding: 14px 18px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            font-size: 0.8rem;
+        }
+
+        .event-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .event-tag {
+            font-family: monospace;
+            font-weight: bold;
+            color: #818cf8;
+            font-size: 0.76rem;
+            margin-bottom: 4px;
+        }
+
+        .event-val {
+            color: #cbd5e1;
+            word-break: break-all;
+        }
+
+        .test-kuchbhi-box {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .test-kuchbhi-box input {
+            flex: 1;
+            background: #1e293b;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: white;
+            font-size: 0.78rem;
+            padding: 6px 10px;
+            outline: none;
+        }
+
+        .test-kuchbhi-box button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* Nickname Modal */
+        .modal-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.hidden {
+            display: none;
+        }
+
+        .modal-card {
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 400px;
+            padding: 26px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            text-align: center;
+            animation: zoomIn 0.2s ease-out;
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.92); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+        }
+
+        .modal-card h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: var(--text-main);
+        }
+
+        .modal-card p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .modal-input {
+            width: 100%;
+            background: #111827;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 12px 16px;
+            color: white;
+            font-size: 0.95rem;
+            margin-bottom: 16px;
+            outline: none;
+            text-align: center;
+        }
+
+        .modal-input:focus {
+            border-color: var(--primary);
+        }
+
+        .modal-btn {
+            width: 100%;
+            background: var(--primary-gradient);
+            color: white;
+            font-weight: 600;
+            padding: 12px;
+            border-radius: var(--radius-md);
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+            transition: filter 0.2s;
+        }
+
+        .modal-btn:hover {
+            filter: brightness(1.1);
+        }
+
+        @media (max-width: 640px) {
+            body { padding: 0; }
+            .app-container { height: 100vh; border-radius: 0; border: none; }
+            .message-row { max-width: 90%; }
+            .tutorial-drawer { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Top App Header -->
+        <header class="chat-header">
+            <div class="header-left">
+                <div class="brand-logo">💬</div>
+                <div class="brand-info">
+                    <h1>Socket.IO Chat</h1>
+                    <div class="status-badge">
+                        <span class="status-dot" id="statusDot"></span>
+                        <span id="statusText">Connecting...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <div class="user-count-chip">
+                    <span>👥</span>
+                    <span id="userCount">1</span> Online
+                </div>
+                <button class="user-profile-btn" id="profileBtn" title="Change nickname">
+                    <span id="headerUsername">You</span> ✎
+                </button>
+                <button class="icon-btn active" id="soundToggleBtn" title="Toggle audio sound">
+                    🔊
+                </button>
+                <button class="icon-btn" id="drawerToggleBtn" title="View Socket.IO Events & Debug">
+                    ⚡
+                </button>
+            </div>
+        </header>
+
+        <!-- Announcement Banner (from server announcement event) -->
+        <div class="announcement-bar hidden" id="announcementBar">
+            <div class="announcement-content">
+                <span>📢</span>
+                <span id="announcementText">Announcement</span>
+            </div>
+            <button class="announcement-close" id="closeAnnouncement">✕</button>
+        </div>
+
+        <!-- Main Messages Container -->
+        <main class="chat-body" id="chatBody">
+            <div class="system-bubble">
+                🔒 Connected to real-time WebSocket channel. Messages are broadcast live.
+            </div>
+
+            <!-- Welcome Gyankibaat will be appended here -->
+            <div id="gyanContainer"></div>
+
+            <!-- Message List -->
+            <div id="messagesList" style="display: flex; flex-direction: column; gap: 14px;"></div>
+
+            <!-- Typing indicator -->
+            <div class="typing-indicator" id="typingIndicator">
+                <span id="typingUser">Someone</span> is typing
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </main>
+
+        <!-- Input Area -->
+        <footer class="chat-input-area">
+            <div class="quick-actions">
+                <div class="emoji-bar">
+                    <button class="emoji-btn" data-emoji="👋">👋</button>
+                    <button class="emoji-btn" data-emoji="😄">😄</button>
+                    <button class="emoji-btn" data-emoji="🔥">🔥</button>
+                    <button class="emoji-btn" data-emoji="❤️">❤️</button>
+                    <button class="emoji-btn" data-emoji="👍">👍</button>
+                    <button class="emoji-btn" data-emoji="🎉">🎉</button>
+                    <button class="emoji-btn" data-emoji="🚀">🚀</button>
+                </div>
+                <button class="tutorial-trigger-btn" id="sendKuchbhiQuick">
+                    ⚡ Send 'kuchbhi' event
+                </button>
+            </div>
+
+            <form class="input-form" id="chatForm">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    class="message-input" 
+                    placeholder="Type your message here... (Press Enter to send)" 
+                    autocomplete="off"
+                    required
+                />
+                <button type="submit" class="send-btn" title="Send Message">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </form>
+        </footer>
+
+        <!-- Socket Event Monitor Drawer -->
+        <aside class="tutorial-drawer" id="tutorialDrawer">
+            <div class="drawer-header">
+                <h3>⚡ Socket Events Inspector</h3>
+                <button class="announcement-close" id="closeDrawerBtn">✕</button>
+            </div>
+            <div class="drawer-body">
+                <p style="color: var(--text-muted);">
+                    Live inspect your server events (<code>gyankibaat</code>, <code>join</code>, <code>announcement</code>, <code>kuchbhi</code>).
+                </p>
+
+                <div class="event-card">
+                    <div class="event-tag">Event: "gyankibaat"</div>
+                    <div class="event-val" id="logGyankibaat">Waiting for server...</div>
+                </div>
+
+                <div class="event-card">
+                    <div class="event-tag">Event: "announcement"</div>
+                    <div class="event-val" id="logAnnouncement">Waiting for server...</div>
+                </div>
+
+                <div class="event-card">
+                    <div class="event-tag">Event: "join"</div>
+                    <div class="event-val" id="logJoin">No user join received yet</div>
+                </div>
+
+                <div class="event-card">
+                    <div class="event-tag">Send "kuchbhi" to Server:</div>
+                    <div class="test-kuchbhi-box">
+                        <input type="text" id="kuchbhiInput" placeholder="Message for kuchbhi..." value="welcome to client side">
+                        <button type="button" id="btnSendKuchbhi">Send</button>
+                    </div>
+                </div>
+
+                <div class="event-card">
+                    <div class="event-tag">Latest "kuchbhi" Received:</div>
+                    <div class="event-val" id="logKuchbhiReceived">None</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Nickname Prompt Modal -->
+        <div class="modal-overlay hidden" id="nicknameModal">
+            <div class="modal-card">
+                <div class="modal-icon">👋</div>
+                <h2>Choose Your Name</h2>
+                <p>Pick a display name to start chatting with others in the room.</p>
+                <input type="text" id="nicknameInput" class="modal-input" placeholder="e.g. Rahul, Alex, CodingGuru" maxlength="25">
+                <button class="modal-btn" id="saveNicknameBtn">Join Chat</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let currentUsername = localStorage.getItem("chat_username") || "User_" + Math.floor(1000 + Math.random() * 9000);
+        let isSoundEnabled = true;
+        let typingTimeout = null;
+
+        // UI Element References
+        const statusDot = document.getElementById("statusDot");
+        const statusText = document.getElementById("statusText");
+        const userCount = document.getElementById("userCount");
+        const headerUsername = document.getElementById("headerUsername");
+        const profileBtn = document.getElementById("profileBtn");
+        const soundToggleBtn = document.getElementById("soundToggleBtn");
+        const drawerToggleBtn = document.getElementById("drawerToggleBtn");
+        const closeDrawerBtn = document.getElementById("closeDrawerBtn");
+        const tutorialDrawer = document.getElementById("tutorialDrawer");
+
+        const announcementBar = document.getElementById("announcementBar");
+        const announcementText = document.getElementById("announcementText");
+        const closeAnnouncement = document.getElementById("closeAnnouncement");
+        const gyanContainer = document.getElementById("gyanContainer");
+
+        const chatBody = document.getElementById("chatBody");
+        const messagesList = document.getElementById("messagesList");
+        const typingIndicator = document.getElementById("typingIndicator");
+        const typingUser = document.getElementById("typingUser");
+
+        const chatForm = document.getElementById("chatForm");
+        const messageInput = document.getElementById("messageInput");
+
+        const nicknameModal = document.getElementById("nicknameModal");
+        const nicknameInput = document.getElementById("nicknameInput");
+        const saveNicknameBtn = document.getElementById("saveNicknameBtn");
+
+        const logGyankibaat = document.getElementById("logGyankibaat");
+        const logAnnouncement = document.getElementById("logAnnouncement");
+        const logJoin = document.getElementById("logJoin");
+        const logKuchbhiReceived = document.getElementById("logKuchbhiReceived");
+        const kuchbhiInput = document.getElementById("kuchbhiInput");
+        const btnSendKuchbhi = document.getElementById("btnSendKuchbhi");
+        const sendKuchbhiQuick = document.getElementById("sendKuchbhiQuick");
+
+        // Helper: Generate Avatar Color from Username
+        function getAvatarColor(name) {
+            const colors = [
+                '#6366f1', '#ec4899', '#f97316', '#10b981', 
+                '#06b6d4', '#8b5cf6', '#3b82f6', '#14b8a6'
+            ];
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        // Web Audio Notification Chime (No external mp3 required)
+        function playMessageSound() {
+            if (!isSoundEnabled) return;
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.type = "sine";
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.1); // A5
+                
+                gain.gain.setValueAtTime(0.12, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                osc.start();
+                osc.stop(ctx.currentTime + 0.35);
+            } catch(e) {
+                // Audio context policy fallback
+            }
+        }
+
+        // Update UI Username
+        function updateUsernameUI(name) {
+            currentUsername = name;
+            localStorage.setItem("chat_username", name);
+            headerUsername.textContent = name;
+        }
+        updateUsernameUI(currentUsername);
+
+        // --- Socket.IO Connection Setup ---
+        // Works seamlessly whether opened directly as client.html or hosted through server
+        const socketHost = window.location.origin.startsWith("http") 
+            ? window.location.origin 
+            : "http://localhost:8080/";
+
+        const socket = io(socketHost, {
+            transports: ["websocket", "polling"]
+        });
+
+        // 1. Connection Lifecycle
+        socket.on("connect", () => {
+            statusDot.classList.add("connected");
+            statusText.textContent = "Connected (8080)";
+            console.log("Connected with Socket ID:", socket.id);
+
+            // Register username
+            socket.emit("set_username", currentUsername);
+
+            // Send initial kuchbhi as in original tutorial
+            socket.emit("kuchbhi", "welcome to client side ");
+        });
+
+        socket.on("disconnect", () => {
+            statusDot.classList.remove("connected");
+            statusText.textContent = "Disconnected";
+        });
+
+        socket.on("connect_error", (err) => {
+            statusDot.classList.remove("connected");
+            statusText.textContent = "Connection Error";
+            console.error("Socket connect error:", err);
+        });
+
+        // 2. Active User Count
+        socket.on("user_count", (count) => {
+            userCount.textContent = count;
+        });
+
+        // 3. Gyankibaat (Original Server Event)
+        socket.on("gyankibaat", (msg) => {
+            console.log("Message from server [gyankibaat]:", msg);
+            logGyankibaat.textContent = msg;
+
+            gyanContainer.innerHTML = `
+                <div class="gyan-bubble">
+                    <span>💡 <strong>Gyankibaat:</strong> ${escapeHtml(msg)}</span>
+                </div>
+            `;
+            scrollToBottom();
+        });
+
+        // 4. Join Event (Original Server Event)
+        socket.on("join", (msg) => {
+            console.log("Message from server [join]:", msg);
+            logJoin.textContent = msg;
+            addSystemMessage(`👋 ${msg}`);
+        });
+
+        // 5. Announcement Event (Original Server Event)
+        socket.on("announcement", (msg) => {
+            console.log("Message from server [announcement]:", msg);
+            logAnnouncement.textContent = msg;
+            announcementText.textContent = msg;
+            announcementBar.classList.remove("hidden");
+        });
+
+        // 6. User Left Event
+        socket.on("user_left", (msg) => {
+            addSystemMessage(`🚪 ${msg}`);
+        });
+
+        // 7. General System Notifications
+        socket.on("system_message", (data) => {
+            addSystemMessage(`ℹ️ ${data.text}`);
+        });
+
+        // 8. Kuchbhi Broadcast
+        socket.on("kuchbhi_received", (data) => {
+            logKuchbhiReceived.textContent = `${data.from}: ${data.message} (${data.timestamp})`;
+            addSystemMessage(`⚡ <strong>${escapeHtml(data.from)}</strong> triggered <code>kuchbhi</code>: "${escapeHtml(data.message)}"`);
+        });
+
+        // 9. Real-Time Chat Message Handler
+        socket.on("chat_message", (msg) => {
+            const isMe = msg.socketId === socket.id || msg.sender === currentUsername;
+            appendMessageBubble(msg, isMe);
+            if (!isMe) {
+                playMessageSound();
+            }
+            scrollToBottom();
+        });
+
+        // 10. Typing Status
+        socket.on("user_typing", (username) => {
+            typingUser.textContent = username;
+            typingIndicator.style.display = "flex";
+            scrollToBottom();
+        });
+
+        socket.on("user_stop_typing", () => {
+            typingIndicator.style.display = "none";
+        });
+
+        // --- UI Rendering Helpers ---
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function scrollToBottom() {
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        function addSystemMessage(htmlText) {
+            const div = document.createElement("div");
+            div.className = "system-bubble";
+            div.innerHTML = htmlText;
+            messagesList.appendChild(div);
+            scrollToBottom();
+        }
+
+        function appendMessageBubble(msg, isMe) {
+            const row = document.createElement("div");
+            row.className = `message-row ${isMe ? 'sent' : 'received'}`;
+
+            const initial = (msg.sender || "U").charAt(0).toUpperCase();
+            const color = getAvatarColor(msg.sender || "User");
+
+            row.innerHTML = `
+                <div class="avatar" style="background-color: ${color};">${initial}</div>
+                <div class="message-content">
+                    <div class="message-info">
+                        <span class="sender-name">${escapeHtml(isMe ? 'You' : msg.sender)}</span>
+                        <span>•</span>
+                        <span>${escapeHtml(msg.timestamp || 'Now')}</span>
+                    </div>
+                    <div class="message-bubble">${escapeHtml(msg.text)}</div>
+                </div>
+            `;
+
+            messagesList.appendChild(row);
+        }
+
+        // --- User Interaction Events ---
+
+        // Send Chat Message Form
+        chatForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const text = messageInput.value.trim();
+            if (!text) return;
+
+            // Emit to server
+            socket.emit("chat_message", {
+                sender: currentUsername,
+                text: text
+            });
+
+            // Stop typing status
+            socket.emit("stop_typing");
+            if (typingTimeout) clearTimeout(typingTimeout);
+
+            messageInput.value = "";
+            messageInput.focus();
+        });
+
+        // Typing Detection with Debounce
+        messageInput.addEventListener("input", () => {
+            socket.emit("typing", currentUsername);
+            if (typingTimeout) clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                socket.emit("stop_typing");
+            }, 1200);
+        });
+
+        // Emoji Buttons
+        document.querySelectorAll(".emoji-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const emoji = btn.getAttribute("data-emoji");
+                messageInput.value += emoji;
+                messageInput.focus();
+            });
+        });
+
+        // Announcement Close Button
+        closeAnnouncement.addEventListener("click", () => {
+            announcementBar.classList.add("hidden");
+        });
+
+        // Audio Sound Toggle
+        soundToggleBtn.addEventListener("click", () => {
+            isSoundEnabled = !isSoundEnabled;
+            soundToggleBtn.classList.toggle("active", isSoundEnabled);
+            soundToggleBtn.textContent = isSoundEnabled ? "🔊" : "🔇";
+        });
+
+        // Events Drawer Toggle
+        drawerToggleBtn.addEventListener("click", () => {
+            tutorialDrawer.classList.toggle("open");
+        });
+        closeDrawerBtn.addEventListener("click", () => {
+            tutorialDrawer.classList.remove("open");
+        });
+
+        // Quick & Inspector 'kuchbhi' triggers
+        btnSendKuchbhi.addEventListener("click", () => {
+            const text = kuchbhiInput.value.trim() || "Test message from kuchbhi button";
+            socket.emit("kuchbhi", text);
+        });
+
+        sendKuchbhiQuick.addEventListener("click", () => {
+            const text = `Quick kuchbhi ping at ${new Date().toLocaleTimeString()}`;
+            socket.emit("kuchbhi", text);
+        });
+
+        // Profile / Nickname Modal Handlers
+        profileBtn.addEventListener("click", () => {
+            nicknameInput.value = currentUsername;
+            nicknameModal.classList.remove("hidden");
+            nicknameInput.focus();
+        });
+
+        function saveNickname() {
+            const newName = nicknameInput.value.trim();
+            if (newName && newName !== currentUsername) {
+                updateUsernameUI(newName);
+                socket.emit("set_username", newName);
+            }
+            nicknameModal.classList.add("hidden");
+        }
+
+        saveNicknameBtn.addEventListener("click", saveNickname);
+        nicknameInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") saveNickname();
+        });
+
+        nicknameModal.addEventListener("click", (e) => {
+            if (e.target === nicknameModal) {
+                nicknameModal.classList.add("hidden");
+            }
+        });
+
+        // Focus message input by default
+        window.addEventListener("DOMContentLoaded", () => {
+            messageInput.focus();
+        });
+    </script>
+</body>
+</html>
